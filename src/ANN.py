@@ -21,6 +21,19 @@ class ANN:
         config: array of Layers
         """
         self.config = config
+
+    def train(self, b_size, l_rate, epoch, verb):
+        """
+        Trains the data using certain parameters and also shows the progress
+
+        b_size: batch size
+        l_rate: learning rate
+        epoch: n numbers of epoch
+        verbose: to show progress (boolean)
+
+        Returns the history of the training process
+        """
+        pass
     
     def show(self):
         """
@@ -38,6 +51,7 @@ class ANN:
         """
         Shows the weight gradient distribution of each layer
         """
+        pass
     
     def save(self):
         """
@@ -49,4 +63,6 @@ class ANN:
         """
         Loads a model instance using a format
         """
+        pass
+
 
