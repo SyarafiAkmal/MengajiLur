@@ -3,33 +3,63 @@ import numpy as np
 
 # util functions
 
+# activation functions
+
 def linear(input, der=False):
     if not der+False:
         return input
-    else:
-        return 1
+    return 1
 
 def relU(input, der=False):
     if not der:
-        return max(0, np.round(input, 4))
-    else:
-        if input > 0:
-            return 1
-        else:
-            return 0
+        return max(0, input)
+    if input > 0:
+        return 1
+    return 0
 
 def sigmoid(input, der=False):
     if not der:
-        return np.round(1 / (1 + np.exp(-input)), 4)
-    else:
-        sigmoid_x = sigmoid(input, False)
-        return np.round(sigmoid_x* (1 - sigmoid_x))
+        return 1 / (1 + np.exp(-input))
+    return input * (1 - input)
 
 def h_tan(input, der=False):
     if not der:
-        return np.round((np.exp(input) - np.exp(-input)) / (np.exp(input) + np.exp(-input)), 4)
-    else:
-        return np.round((2/(np.exp(input) - np.exp(-input))**2), 4)
+        return (np.exp(input) - np.exp(-input)) / (np.exp(input) + np.exp(-input))
+    return (2/(np.exp(input) - np.exp(-input))**2)
+
+# error loss functions
+
+def SSE(target, pred, der=False):
+    if not der:
+        return 0.5 * np.sum((target - pred) ** 2)
+    return target - pred
+
+def MSE(target, pred, der=False): # if multiple neuron, enter the mean as pred
+    if not der:
+        return -2*np.mean(target-pred)
+    return np.mean((target - pred) ** 2)
+
+# print(MSE(np.array([1.5, 0.1, 1.2]), np.array([1.3, 0.09, 1.3])))
+
+def BCE(target, pred): 
+    return -np.mean(target * np.log(pred) + (1 - target) * np.log(1 - pred))
+
+# print(BCE(np.array([0.5, 0.4, 0.9]), np.array([0.6, 0.5, 0.7])))
+
+def CCE(target, pred):
+    return -np.mean(np.sum(target * np.log(pred), axis=1))
+
+# print(CCE(np.array([
+#     [0, 1, 0],
+#     [1, 0, 0],
+#     [0, 0, 1]
+# ]), np.array([
+#     [0.1, 0.7, 0.2],
+#     [0.8, 0.1, 0.1],
+#     [0.3, 0.2, 0.5]
+# ])))
+
+# weight init functions
 
 def zero_init(fr, to, params=None):
     return np.array([[0 for _ in range(fr)] for _ in range(to+1)]) #to + 1 for bias
@@ -37,7 +67,7 @@ def zero_init(fr, to, params=None):
 def random_uniform(fr, to, params=None):
     np.random.seed(params["seed"])
     # return np.round(np.random.uniform(params["lb"], params["ub"], (fr*to)+2), fr*to).reshape((fr*to)+2, 1).reshape(fr+1, to)
-    if params["seed"] == 42:
+    if params["seed"] == 42: # for debug purpose
         return np.array([[0.35, 0.35], [0.15, 0.25], [0.20, 0.30]])
     if params["seed"] == 60:
         return np.array([[0.60, 0.60], [0.40, 0.50], [0.45, 0.55]])
@@ -65,7 +95,7 @@ class Layer:
         self.weight_to = None
 
 class ANN:
-    def __init__(self, data, config: list[Layer], input: Layer=None, output: Layer=None, load=None):
+    def __init__(self, data, config: list[Layer], input: Layer=None, output: Layer=None, error=None, load=None):
         """
         Initiation of an ANN
 
@@ -76,6 +106,7 @@ class ANN:
         """
         self.data = data
         self.network: list[Layer] = [input] + config + [output]
+        self.err_func = error
 
         if not load:
             for i in range(len(self.network)-1):
@@ -88,7 +119,7 @@ class ANN:
             pass
 
 
-    def train(self, b_size=None, l_rate=None, epoch=1, verb=None):
+    def train(self, b_size=None, l_rate=None, epoch=1, verb=None): # bsize no need i think, just input of matrix
         """
         Trains the data using certain parameters and also shows the progress
 
@@ -120,7 +151,7 @@ class ANN:
             # print("backward prop")
             target = np.array([0.01, 0.99])
             out = self.network[len(self.network)-1].input
-            self.network[len(self.network)-1].error = np.vectorize(self.error_translate)(out, target)
+            self.network[len(self.network)-1].error = np.vectorize(self.error_translate)(self.network[len(self.network)-2].a_func, out, target)
 
             for i in range(len(self.network)-2, 0, -1):
                 weight = self.network[i].weight_to[1:]
@@ -128,7 +159,7 @@ class ANN:
                 error = self.network[i+1].error[0]
                 temp = []
                 for j in range(len(inp)):
-                    temp = np.append(self.network[i].error, np.dot(weight[j], error) * inp[j] * (1-inp[j]))
+                    temp = np.append(self.network[i].error, np.dot(weight[j], error) * self.network[i].a_func(inp[j], True))
                     temp = np.array([temp])
                     # print(np.dot(weight[j], error), "(sigma error chain) *", inp[j], "(input) *", (1-inp[j]), "(1-input) calculation")
                     # print(self.network[i].error, "error")
@@ -161,8 +192,11 @@ class ANN:
             print("")
         pass
 
-    def error_translate(self, x, y):
-        return (x * (1 - x) * (y - x))
+    def error_translate(self, a_func, x, y):
+        # x * (1 - x): derivative of the a_func
+        # (y - x): derivative of the loss func 
+        print(a_func)
+        return (a_func(x, True) * self.err_func(y, x, True))
     
     def weight_update(self, weight, l_rate, error, input):
         return weight + ((l_rate * error) * input)
@@ -188,7 +222,7 @@ class ANN:
 layer_i = Layer(sigmoid, [random_uniform, {"seed": 42, "lb": 0, "ub": 0.5}], 2)
 layer_1 = Layer(sigmoid, [random_uniform, {"seed": 60, "lb": 0, "ub": 0.5}], 2)
 layer_o = Layer(None, [None, {}], 2)
-ann = ANN(None, [layer_1], input=layer_i, output=layer_o)
+ann = ANN(None, [layer_1], input=layer_i, output=layer_o, error=SSE)
 ann.train(l_rate=0.5, epoch=2)
 ann.show()
 
