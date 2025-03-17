@@ -1,8 +1,6 @@
 # imports
 import numpy as np
 
-# util functions
-
 # activation functions
 
 def linear(input, der=False):
@@ -12,10 +10,12 @@ def linear(input, der=False):
 
 def relU(input, der=False):
     if not der:
-        return max(0, input)
-    if input > 0:
-        return 1
-    return 0
+        return np.maximum(0, input)
+    return np.where(input > 0, 1, 0)
+
+def eLU(input, der=False):
+    if not der:
+        return 
 
 def sigmoid(input, der=False):
     if not der:
@@ -41,7 +41,7 @@ def MSE(target, pred, der=False): # if multiple neuron, enter the mean as pred
 
 # print(MSE(np.array([1.5, 0.1, 1.2]), np.array([1.3, 0.09, 1.3])))
 
-def BCE(target, pred): 
+def BCE(target, pred):
     return -np.mean(target * np.log(pred) + (1 - target) * np.log(1 - pred))
 
 # print(BCE(np.array([0.5, 0.4, 0.9]), np.array([0.6, 0.5, 0.7])))
@@ -68,9 +68,11 @@ def random_uniform(fr, to, params=None):
     np.random.seed(params["seed"])
     # return np.round(np.random.uniform(params["lb"], params["ub"], (fr*to)+2), fr*to).reshape((fr*to)+2, 1).reshape(fr+1, to)
     if params["seed"] == 42: # for debug purpose
+        return np.array([[0, -1], [1, 1], [1, 1]])
         return np.array([[0.35, 0.35], [0.15, 0.25], [0.20, 0.30]])
     if params["seed"] == 60:
-        return np.array([[0.60, 0.60], [0.40, 0.50], [0.45, 0.55]])
+        return np.array([[0], [1], [-2]])
+        return np.array([[0.6, 0.6], [0.4, 0.5], [0.45, 0.55]])
 
 
 
@@ -119,7 +121,7 @@ class ANN:
             pass
 
 
-    def train(self, b_size=None, l_rate=None, epoch=1, verb=None): # bsize no need i think, just input of matrix
+    def train(self, b_size=None, l_rate=None, epoch=1, verb=None): # NOTE: bsize no need i think, just input of batch input configured matrix
         """
         Trains the data using certain parameters and also shows the progress
 
@@ -133,7 +135,8 @@ class ANN:
         for _ in range(epoch):
             # forward propagation
             # print("forward prop")
-            inp = np.array([[1, 0.05, 0.1]]) 
+            # inp = np.array([[1, 0.05, 0.1]]) 
+            inp = np.array([[1, 0, 0], [1, 0, 1], [1, 1, 0], [1, 1, 1]])
             self.network[0].input = inp
             # print(inp, "input")
             for i in range(len(self.network)-1):
@@ -142,24 +145,28 @@ class ANN:
                 if i == len(self.network)-2:
                     inp = self.network[i].a_func(net)
                 else:
-                    inp = np.concatenate((np.array([[1]]), self.network[i].a_func(net)), axis=1)
+                    res = self.network[i].a_func(net)
+                    inp = np.concatenate((np.ones((res.shape[0], 1)), res), axis=1)
+                    # print(inp)
                 # print(inp, "input")
                 self.network[i+1].input = inp
             
 
             # backward propagation
             # print("backward prop")
-            target = np.array([0.01, 0.99])
+            target = np.array([[0], [1], [1], [0]])
+            # target = np.array([[0.01, 0.99]])
             out = self.network[len(self.network)-1].input
-            self.network[len(self.network)-1].error = np.vectorize(self.error_translate)(self.network[len(self.network)-2].a_func, out, target)
+            self.network[len(self.network)-1].error = np.array([np.mean(np.vectorize(self.error_translate)(self.network[len(self.network)-2].a_func, out, target), axis=0)])
 
             for i in range(len(self.network)-2, 0, -1):
                 weight = self.network[i].weight_to[1:]
                 inp = self.network[i].input[0][1:]
                 error = self.network[i+1].error[0]
-                temp = []
+                temp=np.array([])
+                # print(self.network[i].input, "inp")
                 for j in range(len(inp)):
-                    temp = np.append(self.network[i].error, np.dot(weight[j], error) * self.network[i].a_func(inp[j], True))
+                    temp = np.append(temp, np.dot(weight[j], error) * self.network[i].a_func(inp[j], True))
                     temp = np.array([temp])
                     # print(np.dot(weight[j], error), "(sigma error chain) *", inp[j], "(input) *", (1-inp[j]), "(1-input) calculation")
                     # print(self.network[i].error, "error")
@@ -183,7 +190,13 @@ class ANN:
         Shows the network structure
         """
         print("ANN structure:")
-        for layer in self.network:
+        for index, layer in enumerate(self.network):
+            if index == 0:
+                print("input layer")
+            elif index == len(self.network) - 1:
+                print("output layer")
+            else:
+                print("hidden layer")
             print(layer.neurons, "neurons")
             print(layer.weight_to, "weight")
             print(layer.input, "input")
@@ -195,7 +208,6 @@ class ANN:
     def error_translate(self, a_func, x, y):
         # x * (1 - x): derivative of the a_func
         # (y - x): derivative of the loss func 
-        print(a_func)
         return (a_func(x, True) * self.err_func(y, x, True))
     
     def weight_update(self, weight, l_rate, error, input):
@@ -219,10 +231,11 @@ class ANN:
         """
         pass
 
-layer_i = Layer(sigmoid, [random_uniform, {"seed": 42, "lb": 0, "ub": 0.5}], 2)
-layer_1 = Layer(sigmoid, [random_uniform, {"seed": 60, "lb": 0, "ub": 0.5}], 2)
-layer_o = Layer(None, [None, {}], 2)
+layer_i = Layer(relU, [random_uniform, {"seed": 42, "lb": 0, "ub": 0.5}], 2)
+layer_1 = Layer(relU, [random_uniform, {"seed": 60, "lb": 0, "ub": 0.5}], 2)
+layer_o = Layer(None, [None, {}], 1)
 ann = ANN(None, [layer_1], input=layer_i, output=layer_o, error=SSE)
-ann.train(l_rate=0.5, epoch=2)
+ann.train(l_rate=0.5)
 ann.show()
+# print((np.array([1, 2]) + np.array([3, 4])) / 2)
 
