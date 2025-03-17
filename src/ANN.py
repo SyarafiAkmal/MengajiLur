@@ -27,6 +27,11 @@ def h_tan(input, der=False):
         return (np.exp(input) - np.exp(-input)) / (np.exp(input) + np.exp(-input))
     return (2/(np.exp(input) - np.exp(-input))**2)
 
+def softmax(input, der=False):
+    if not der:
+        exp_x = np.exp(input - np.max(input))
+        return exp_x / np.sum(exp_x)
+
 # error loss functions
 
 def SSE(target, pred, der=False):
@@ -68,10 +73,10 @@ def random_uniform(fr, to, params=None):
     np.random.seed(params["seed"])
     # return np.round(np.random.uniform(params["lb"], params["ub"], (fr*to)+2), fr*to).reshape((fr*to)+2, 1).reshape(fr+1, to)
     if params["seed"] == 42: # for debug purpose
-        return np.array([[0, -1], [1, 1], [1, 1]])
+        # return np.array([[0, -1], [1, 1], [1, 1]])
         return np.array([[0.35, 0.35], [0.15, 0.25], [0.20, 0.30]])
     if params["seed"] == 60:
-        return np.array([[0], [1], [-2]])
+        # return np.array([[0], [1], [-2]])
         return np.array([[0.6, 0.6], [0.4, 0.5], [0.45, 0.55]])
 
 
@@ -135,8 +140,8 @@ class ANN:
         for _ in range(epoch):
             # forward propagation
             # print("forward prop")
-            # inp = np.array([[1, 0.05, 0.1]]) 
-            inp = np.array([[1, 0, 0], [1, 0, 1], [1, 1, 0], [1, 1, 1]])
+            inp = np.array([[1, 0.05, 0.1]]) 
+            # inp = np.array([[1, 0, 0], [1, 0, 1], [1, 1, 0], [1, 1, 1]])  
             self.network[0].input = inp
             # print(inp, "input")
             for i in range(len(self.network)-1):
@@ -154,8 +159,8 @@ class ANN:
 
             # backward propagation
             # print("backward prop")
-            target = np.array([[0], [1], [1], [0]])
-            # target = np.array([[0.01, 0.99]])
+            # target = np.array([[0], [1], [1], [0]])
+            target = np.array([[0.01, 0.99]])
             out = self.network[len(self.network)-1].input
             self.network[len(self.network)-1].error = np.array([np.mean(np.vectorize(self.error_translate)(self.network[len(self.network)-2].a_func, out, target), axis=0)])
 
@@ -231,9 +236,9 @@ class ANN:
         """
         pass
 
-layer_i = Layer(relU, [random_uniform, {"seed": 42, "lb": 0, "ub": 0.5}], 2)
-layer_1 = Layer(relU, [random_uniform, {"seed": 60, "lb": 0, "ub": 0.5}], 2)
-layer_o = Layer(None, [None, {}], 1)
+layer_i = Layer(sigmoid, [random_uniform, {"seed": 42, "lb": 0, "ub": 0.5}], 2)
+layer_1 = Layer(sigmoid, [random_uniform, {"seed": 60, "lb": 0, "ub": 0.5}], 1)
+layer_o = Layer(None, [None, {}], 2)
 ann = ANN(None, [layer_1], input=layer_i, output=layer_o, error=SSE)
 ann.train(l_rate=0.5)
 ann.show()
