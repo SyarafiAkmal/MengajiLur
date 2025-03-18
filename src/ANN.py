@@ -31,6 +31,16 @@ def h_tan(input, der=False):
         return (np.exp(input) - np.exp(-input)) / (np.exp(input) + np.exp(-input))
     return (2/(np.exp(input) - np.exp(-input))**2)
 
+def softmax(input, der=False):
+    if not der:
+        exp_x = np.exp(input - np.max(input))
+        return exp_x / np.sum(exp_x)
+    
+def step_function(input, der=False):
+    if der:
+        return 0
+    return np.where(input >= 0, 1, 0)
+
 # error loss functions
 
 def SSE(target, pred, der=False):
@@ -70,13 +80,14 @@ def zero_init(fr, to, params=None):
 
 def random_uniform(fr, to, params=None):
     np.random.seed(params["seed"])
-    # return np.round(np.random.uniform(params["lb"], params["ub"], (fr*to)+2), fr*to).reshape((fr*to)+2, 1).reshape(fr+1, to)
-    if params["seed"] == 42: # for debug purpose
-        return np.array([[0, -1], [1, 1], [1, 1]])
-        return np.array([[0.35, 0.35], [0.15, 0.25], [0.20, 0.30]])
-    if params["seed"] == 60:
-        return np.array([[0], [1], [-2]])
-        return np.array([[0.6, 0.6], [0.4, 0.5], [0.45, 0.55]])
+    # print(fr, to)
+    return np.round(np.random.uniform(params["lb"], params["ub"], (fr*to)+to), fr*to).reshape((fr*to)+to, 1).reshape(fr+1, to)
+    # if params["seed"] == 42: # for debug purpose
+    #     return np.array([[0, -1], [1, 1], [1, 1]])
+    #     return np.array([[0.35, 0.35], [0.15, 0.25], [0.20, 0.30]])
+    # if params["seed"] == 60:
+    #     return np.array([[0], [1], [-2]])
+    #     return np.array([[0.6, 0.6], [0.4, 0.5], [0.45, 0.55]])
 
 
 
@@ -140,8 +151,8 @@ class ANN:
         for _ in range(epoch):
             # forward propagation
             # print("forward prop")
-            # inp = np.array([[1, 0.05, 0.1]]) 
-            inp = np.array([[1, 0, 0], [1, 0, 1], [1, 1, 0], [1, 1, 1]])
+            inp = np.array([[1, 0.05, 0.1]]) 
+            # inp = np.array([[1, 0, 0], [1, 0, 1], [1, 1, 0], [1, 1, 1]])  
             self.network[0].input = inp
             # print(inp, "input")
             for i in range(len(self.network)-1):
@@ -159,8 +170,8 @@ class ANN:
 
             # backward propagation
             # print("backward prop")
-            target = np.array([[0], [1], [1], [0]])
-            # target = np.array([[0.01, 0.99]])
+            # target = np.array([[0], [1], [1], [0]])
+            target = np.array([[0.01, 0.99]])
             out = self.network[len(self.network)-1].input
             self.network[len(self.network)-1].error = np.array([np.mean(np.vectorize(self.error_translate)(self.network[len(self.network)-2].a_func, out, target), axis=0)])
 
@@ -181,12 +192,14 @@ class ANN:
             for i in range(len(self.network)-1):
                 weight = self.network[i].weight_to
                 # print(weight)
+                temp=[]
                 for j in range(len(self.network[i].input[0])):
-                    # print(weight[j])
-                    # print(self.network[i+1].error)
-                    # print(weight[j], (l_rate * self.network[i+1].error), self.network[i].input[0][j])
-                    weight[j] = (weight[j] + (l_rate * self.network[i+1].error) * self.network[i].input[0][j])[0]
-                self.network[i].weight_to = weight
+                    # print(weight[j], "weight")
+                    # print((l_rate * self.network[i+1].error) * self.network[i].input[0][j])
+                    # print(self.network[i].input[0][j], "input")
+                    temp += [(weight[j] + (l_rate * self.network[i+1].error) * self.network[i].input[0][j])[0]]
+                self.network[i].weight_to = np.array(temp)
+                # print(self.network[i].weight_to)
             
 
     
@@ -206,9 +219,9 @@ class ANN:
             print(layer.weight_to, "weight")
             print(layer.input, "input")
             print(layer.a_func, "activation function")
-            print(layer.error, "error")
+            print(layer.error, "error term")
             print("")
-        pass
+        print(self.err_func(np.array([[0.01, 0.99]]), self.network[len(self.network)-1].input), "error")
 
     def error_translate(self, a_func, x, y):
         # x * (1 - x): derivative of the a_func
@@ -407,11 +420,11 @@ class ANN:
         """
         pass
 
-layer_i = Layer(relU, [random_uniform, {"seed": 42, "lb": 0, "ub": 0.5}], 2)
-layer_1 = Layer(relU, [random_uniform, {"seed": 60, "lb": 0, "ub": 0.5}], 2)
-layer_o = Layer(None, [None, {}], 1)
+layer_i = Layer(sigmoid, [random_uniform, {"seed": 42, "lb": 0, "ub": 0.5}], 2)
+layer_1 = Layer(sigmoid, [random_uniform, {"seed": 60, "lb": 0, "ub": 0.5}], 2)
+layer_o = Layer(None, [None, {}], 2)
 ann = ANN(None, [layer_1], input=layer_i, output=layer_o, error=SSE)
-ann.train(l_rate=0.5)
+ann.train(l_rate=0.5, epoch=10000)
 ann.show()
 # print((np.array([1, 2]) + np.array([3, 4])) / 2)
 
