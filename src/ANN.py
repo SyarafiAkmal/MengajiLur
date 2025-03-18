@@ -1,5 +1,9 @@
 # imports
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
+import networkx as nx
 
 # activation functions
 
@@ -95,6 +99,7 @@ class Layer:
         self.input = None
         self.error = np.array([])
         self.weight_to = None
+        self.weight_grad = None 
 
 class ANN:
     def __init__(self, data, config: list[Layer], input: Layer=None, output: Layer=None, error=None, load=None):
@@ -212,19 +217,190 @@ class ANN:
     
     def weight_update(self, weight, l_rate, error, input):
         return weight + ((l_rate * error) * input)
-
-    def w_dist_show(self):
-        """
-        Shows the weight distribution of each layer
-        """
-        pass
-
-    def wg_dist_show(self):
-        """
-        Shows the weight gradient distribution of each layer
-        """
-        pass
     
+    # There is something wrong with the seeding, must revisit later
+    def w_dist_show(self, layers=None):   
+        if layers is None:
+            layers = []
+            for i in range(len(self.network)):
+                if hasattr(self.network[i], 'weight_to') and self.network[i].weight_to is not None:
+                    layers.append(i)
+                    # print(f"layer {i}")
+        
+        good_layers = []
+        for idx in layers:
+            if idx >= 0 and idx < len(self.network):
+                net = self.network[idx]
+                if hasattr(net, 'weight_to') and net.weight_to is not None:
+                    good_layers.append(idx)
+                else:
+                    print(f"Layer {idx} have no weights.")
+            else:
+                print(f"Layer {idx} out of range.")
+        
+        if len(good_layers) == 0:
+            print("No correct layers to visualize.")
+            return
+        
+        fig, axes = plt.subplots(1, len(good_layers), figsize=(6*len(good_layers), 5))
+        
+        if len(good_layers) == 1:
+            axes = [axes]
+        
+        i = 0
+        for layer_idx in good_layers:
+            w = self.network[layer_idx].weight_to.flatten()
+            
+            axes[i].hist(w, bins=20, color='blue', alpha=0.7)
+            axes[i].set_title(f'Layer {layer_idx} Weight Distribution')
+            axes[i].set_xlabel('Weight Value')
+            axes[i].set_ylabel('Frequency')
+            axes[i].grid(True, linestyle='--', alpha=0.7)
+            i += 1
+        
+        plt.tight_layout()
+        plt.show()
+        
+    def wg_dist_show(self, layers=None):
+        if layers is None:
+            layers = []
+            for i in range(len(self.network)):
+                if hasattr(self.network[i], 'weight_grad') and self.network[i].weight_grad is not None:
+                    layers.append(i)
+        
+        valid_layer_list = []
+        for l_idx in layers:
+            layer_valid = False
+            if l_idx >= 0 and l_idx < len(self.network):
+                layer = self.network[l_idx]
+                if hasattr(layer, 'weight_grad') and layer.weight_grad is not None:
+                    valid_layer_list.append(l_idx)
+                    layer_valid = True
+            
+            if not layer_valid:
+                print(f"Layer {l_idx} has no gradients or invalid.")
+        
+        if len(valid_layer_list) == 0:
+            print("No correct layers to visualize.")
+            return
+        
+        fig, ax_array = plt.subplots(1, len(valid_layer_list), figsize=(6*len(valid_layer_list), 5))
+        
+        if len(valid_layer_list) == 1:
+            ax_array = [ax_array]
+        
+        for plot_idx in range(len(valid_layer_list)):
+            l_idx = valid_layer_list[plot_idx]
+            grads = self.network[l_idx].weight_grad.flatten()
+            
+            ax_array[plot_idx].hist(grads, bins=20, color='red', alpha=0.7)
+            ax_array[plot_idx].set_title(f'Layer {l_idx} Weight Gradient Distribution')
+            ax_array[plot_idx].set_xlabel('Gradient Value')
+            ax_array[plot_idx].set_ylabel('Frequency')
+            ax_array[plot_idx].grid(True, linestyle='--', alpha=0.7)
+        
+        plt.tight_layout()
+        plt.show()
+
+    def visualize_network(self, show_weights=True, show_gradients=False, filename=None): 
+        graph = nx.DiGraph()
+        positions = {}
+        labels = {}
+        
+        for layer_idx, layer in enumerate(self.network):
+            for neuron_idx in range(layer.neurons):
+                nid = f"L{layer_idx}N{neuron_idx}"
+                graph.add_node(nid)
+                
+                vertical_pos = (layer.neurons - 1) / 2 - neuron_idx if layer.neurons > 1 else 0
+                positions[nid] = (layer_idx * 2, vertical_pos)
+                labels[nid] = nid
+        
+        for i in range(len(self.network) - 1):
+            layer = self.network[i]
+            
+            if layer.weight_to is None:
+                continue
+                
+            for j in range(layer.neurons):
+                for k in range(self.network[i+1].neurons):
+                    source = f"L{i}N{j}"
+                    target = f"L{i+1}N{k}"
+                    
+                    try:
+                        w_val = layer.weight_to[j, k] if j < layer.weight_to.shape[0] and k < layer.weight_to.shape[1] else 0
+                    except IndexError:
+                        w_val = 0
+                    
+                    g_val = None
+                    if show_gradients and hasattr(layer, 'weight_grad') and layer.weight_grad is not None:
+                        try:
+                            if j < layer.weight_grad.shape[0] and k < layer.weight_grad.shape[1]:
+                                g_val = layer.weight_grad[j, k]
+                        except IndexError:
+                            pass
+                    
+                    graph.add_edge(source, target, weight=w_val, gradient=g_val)
+        
+        plt.figure(figsize=(14, 10))
+        
+        nx.draw_networkx_nodes(graph, positions, node_size=700, node_color='lightblue', alpha=0.8)
+        nx.draw_networkx_labels(graph, positions, labels=labels, font_size=10)
+        
+        conn = graph.edges(data=True)
+        colors = []
+        widths = []
+        
+        for u, v, data in conn:
+            w = data['weight']
+            colors.append('red' if w < 0 else 'blue')
+            widths.append(1 + abs(w))
+        
+        nx.draw_networkx_edges(graph, positions, edgelist=conn, width=widths, 
+                        edge_color=colors, arrows=True, arrowsize=15, alpha=0.6)
+        
+        if show_weights or show_gradients:
+            edge_text = {}
+            
+            for u, v, data in graph.edges(data=True):
+                parts = []
+                
+                if show_weights:
+                    parts.append(f"W: {data['weight']:.2f}")
+                
+                if show_gradients and data['gradient'] is not None:
+                    parts.append(f"G: {data['gradient']:.2f}")
+                
+                edge_text[(u, v)] = "  ".join(parts)
+            
+            nx.draw_networkx_edge_labels(
+                graph, positions, 
+                edge_labels=edge_text, 
+                font_size=8,
+                font_family='sans-serif',
+                font_weight='normal',
+                font_color='black',
+                bbox=dict(alpha=0.6, pad=2, edgecolor='gray', facecolor='white'),
+                label_pos=0.4
+            )
+        
+        plt.title("Neural Network Structure")
+        plt.axis('off')
+        plt.tight_layout()
+        
+        if filename:
+            plt.savefig(filename, dpi=150)
+            print(f"Network graph visualization saved as {filename}")
+        else:
+            try:
+                plt.show()
+            except:
+                default_filename = f"network_viz_{show_weights}_{show_gradients}.png"
+                plt.savefig(default_filename, dpi=150)
+                print(f"Network graph visualization saved as {default_filename}")
+        
+        plt.close()
+
     def save(self):
         """
         Saves the model instance using a format (json?)
