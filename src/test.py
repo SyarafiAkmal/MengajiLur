@@ -11,7 +11,6 @@ def test_weight_visualization():
     ann.show()
     
     print("\nTest 1: Visualizing all layers with weights")
-    input("Enter...")
     ann.w_dist_show()
     
     print("\nTest 2: Visualizing layer 0")

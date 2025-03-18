@@ -2,7 +2,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('TkAgg')  
 import networkx as nx
 
 # activation functions
@@ -221,7 +221,11 @@ class ANN:
             print(layer.a_func, "activation function")
             print(layer.error, "error term")
             print("")
-        print(self.err_func(np.array([[0.01, 0.99]]), self.network[len(self.network)-1].input), "error")
+        
+        if self.network[len(self.network)-1].input is not None:
+            print(self.err_func(np.array([[0.01, 0.99]]), self.network[len(self.network)-1].input), "error")
+        else:
+            print("Network not initialized")
 
     def error_translate(self, a_func, x, y):
         # x * (1 - x): derivative of the a_func
