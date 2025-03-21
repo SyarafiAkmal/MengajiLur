@@ -34,8 +34,15 @@ def h_tan(input, der=False):
 def softmax(input, der=False):
     if not der:
         exp_x = np.exp(input - np.max(input))
-        return exp_x / np.sum(exp_x)
-    
+        return exp_x / np.sum(exp_x, axis=-1, keepdims=True)
+    else:
+        # https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative/
+        # Will revisit later, Apparently softmax usually use together with cross entropy, but 
+        # it can be simplified into (1 - softmax) * softmax
+        # Well, CMIIW
+        s = softmax(input)
+        return s * (1 - s)
+
 def step_function(input, der=False):
     if der:
         return 0
@@ -55,13 +62,39 @@ def MSE(target, pred, der=False): # if multiple neuron, enter the mean as pred
 
 # print(MSE(np.array([1.5, 0.1, 1.2]), np.array([1.3, 0.09, 1.3])))
 
-def BCE(target, pred):
-    return -np.mean(target * np.log(pred) + (1 - target) * np.log(1 - pred))
+def BCE(target, pred, der=False):
+    epsilon = 1e-15
+    pred = np.clip(pred, epsilon, 1 - epsilon)
+    
+    if not der:
+        return -np.mean(target * np.log(pred) + (1 - target) * np.log(1 - pred))
+    else:
+        return -((target / pred) - ((1 - target) / (1 - pred)))
 
 # print(BCE(np.array([0.5, 0.4, 0.9]), np.array([0.6, 0.5, 0.7])))
 
-def CCE(target, pred):
-    return -np.mean(np.sum(target * np.log(pred), axis=1))
+def CCE(target, pred, der=False):
+    # Well, if the target is exactly 0
+    # The log will be undefined, I guess
+    # So, Let's clip it
+    # Again, CMIIW
+    epsilon = 1e-15
+    pred = np.clip(pred, epsilon, 1.0)
+    
+    if not der:
+        if len(pred.shape) == 2 and len(target.shape) == 1:
+            one_hot_target = np.zeros_like(pred)
+            one_hot_target[np.arange(len(target)), target] = 1
+            target = one_hot_target
+            
+        return -np.mean(np.sum(target * np.log(pred), axis=1))
+    else:
+        if len(pred.shape) == 2 and len(target.shape) == 1:
+            one_hot_target = np.zeros_like(pred)
+            one_hot_target[np.arange(len(target)), target] = 1
+            target = one_hot_target
+            
+        return -target / pred
 
 # print(CCE(np.array([
 #     [0, 1, 0],
@@ -90,6 +123,17 @@ def random_uniform(fr, to, params=None):
     #     return np.array([[0.6, 0.6], [0.4, 0.5], [0.45, 0.55]])
 
 
+def random_normal(fr, to, params=None):
+    if params is None:
+        params = {"seed": None, "mean": 0, "var": 0.1}
+        
+    np.random.seed(params["seed"])
+    
+    return np.random.normal(
+        params.get("mean", 0),  
+        np.sqrt(params.get("var", 0.1)),  
+        (fr+1, to)  # +1 for bias
+    )
 
 # classes
 
