@@ -66,7 +66,7 @@ def SSE(target, pred, der=False):
 def MSE(target, pred, der=False):
     if not der:
         return np.mean(np.square(target - pred))
-    return (pred - target) * 2 / pred.shape[0] 
+    return (pred - target) * 2 
 
 def BCE(target, pred, der=False):
     epsilon = 1e-15
@@ -75,7 +75,8 @@ def BCE(target, pred, der=False):
     if not der:
         return -np.mean(target * np.log(pred) + (1 - target) * np.log(1 - pred))
     else:
-        return ((1 - target) / (1 - pred) - target / pred) / pred.shape[0]
+        target = np.asarray(target, dtype=float)
+        return ((1 - target) / (1 - pred) - target / pred)
 
 def CCE(target, pred, der=False):
     # Well, if the target is exactly 0
@@ -95,7 +96,13 @@ def CCE(target, pred, der=False):
             
         return -np.mean(np.sum(target * np.log(pred), axis=1))
     else:
-        return (pred - target) / pred.shape[0]
+        if len(pred.shape) == 2 and (len(target.shape) == 1 or target.shape[1] == 1):
+            one_hot_target = np.zeros_like(pred)
+            for i in range(len(target)):
+                idx = int(target[i]) if len(target.shape) == 1 else int(target[i, 0])
+                one_hot_target[i, idx] = 1
+            target = one_hot_target
+        return (pred - target)
 
 # weight init functions
 
@@ -223,6 +230,8 @@ class ANN:
         if output_layer.a_func == sigmoid and (self.err_func == MSE or self.err_func == SSE):
             # Sigmoid and MSE loss 
             output_error = (output_layer.output - y) 
+            if self.err_func == MSE:
+                output_error = output_error * 2  
             activation_derivative = output_layer.output * (1 - output_layer.output)  
             output_layer.error = output_error * activation_derivative
         elif output_layer.a_func == softmax and self.err_func == CCE:
@@ -250,22 +259,18 @@ class ANN:
             next_layer = self.network[i+1]
             
             error_contrib = next_layer.error @ self.network[i].weight_to[1:].T
-
-
-            # print(f"=========={i}==========")
-            # print(error_contrib.shape)
-            # print("========================")
             
             activation_derivative = current_layer.a_func(current_layer.net, der=True)
             current_layer.error = error_contrib * activation_derivative
         
-        # Weight gradients
+        # Weight gradients 
         for i in range(len(self.network)-1):
             self.network[i].weight_grad = self.network[i].input.T @ self.network[i+1].error
 
     def update_weights(self, learning_rate):
+        batch_size = self.network[0].input.shape[0]  
         for i in range(len(self.network)-1):
-            self.network[i].weight_to -= learning_rate * self.network[i].weight_grad
+            self.network[i].weight_to -= learning_rate * (self.network[i].weight_grad / batch_size)
 
     def train(self, X_train=None, y_train=None, batch_size=32, l_rate=0.01, epoch=10, X_val=None, y_val=None, verb=0):
         self.history = {"train_loss": [], "val_loss": []}
