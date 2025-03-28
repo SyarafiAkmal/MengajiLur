@@ -14,9 +14,20 @@ Neural Network merupakan salah satu model dalam Machine Learning yang telah bany
 
 Dalam tugas besar ini, kami mengimplementasikan FFNN dari awal tanpa menggunakan library seperti TensorFlow atau PyTorch. Implementasi ini bertujuan untuk memberikan pemahaman yang lebih dalam mengenai cara kerja internal neural network.
 
+## Dependencies
+
+- numpy
+- matplotlib
+- sklearn
+
+Instalasi dengan menggunakan `pip`
+```bash
+pip install numpy matplotlib sklearn
+```
+
 ## Setup dan Instalasi
 
-Clone Repository ini dengan dengan perintah berikut
+Clone Repository ini dengan menjalankan perintah berikut pada terminal Anda
 
 ```bash
   git clone https://github.com/SyarafiAkmal/MengajiLur.git
@@ -24,7 +35,10 @@ Clone Repository ini dengan dengan perintah berikut
 
 ## Cara Menjalankan Program
 
-
+- Buka file Jupyter Notebook pada directory src/test.ipynb
+- Jalankan dengan menekan tombol `Run All`
+- Hasil akan tampak di bawah sel kode
+- Apabila hendak melakukan pengujian dengan parameter yang berbeda, ubah nilai pada baris kode dengan komentar `Modify for testing`
 
 ## Kontributor serta Pembagian Tugasnya
 
