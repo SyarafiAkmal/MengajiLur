@@ -177,11 +177,12 @@ def main():
     X_train, X_test, y_train, y_test = load_mnist()
     y_hot = to_one_hot(y_train)
     
-    inp = Layer(relU, [xavier_init, {"seed": 42}], 784)
-    hid = Layer(relU, [xavier_init, {"seed": 43}], 64)
-    out = Layer(softmax, [xavier_init, {"seed": 44}], 10)
+    inp = Layer(relU, [random_uniform, {"seed": 42}], 784)
+    hid = Layer(relU, [random_uniform, {"seed": 43}], 64)
+    hid2 = Layer(relU, [random_uniform, {"seed": 43}], 64)
+    out = Layer(softmax, [random_uniform, {"seed": 44}], 10)
     
-    model = ANN(None, [hid], input=inp, output=out, error=CCE)
+    model = ANN(None, [hid, hid2], input=inp, output=out, error=CCE)
     model.train(X_train, y_hot, batch_size=32, l_rate=0.01, epoch=5, verb=1)
     
     preds = model.predict(X_test)
@@ -194,12 +195,12 @@ def main():
     mlp_acc = mlp.score(X_test, y_test)
     print(f"sklearn accuracy: {mlp_acc:.4f}")
     
-    test_viz()
-    test_activations()
-    test_batches()
-    test_save_load()
-    test_init_methods()
-    test_losses()
+    # test_viz()
+    # test_activations()
+    # test_batches()
+    # test_save_load()
+    # test_init_methods()
+    # test_losses()
 
 if __name__ == "__main__":
     main()

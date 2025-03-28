@@ -115,6 +115,11 @@ def random_uniform(fr, to, params=None):
     
     if "seed" in params and params["seed"] is not None:
         np.random.seed(params["seed"])
+    # if "seed" in params and params["seed"] == 42:
+    #     return np.array([[0.35, 0.35], [0.15, 0.25], [0.20, 0.30]])
+    
+    # if "seed" in params and params["seed"] == 60:
+    #     return np.array([[0.6, 0.6], [0.40, 0.50], [0.45, 0.55]])
     
     lb = params.get("lb", -0.5)
     ub = params.get("ub", 0.5)
@@ -206,6 +211,8 @@ class ANN:
         
         # Process through each layer
         for i in range(len(self.network)-1):
+            print(self.network[i].input.shape)
+            print(self.network[i].weight_to.shape)
             self.network[i+1].net = self.network[i].input @ self.network[i].weight_to
             
             if i == len(self.network)-2: 
@@ -369,7 +376,7 @@ class ANN:
             if hasattr(layer, 'weight_to') and layer.weight_to is not None:
                 print("Weight shape:", layer.weight_to.shape)
                 if layer.weight_to.size < 20:
-                    print("Weights:", layer.weight_to)
+                    print("Weights:\n", layer.weight_to)
             
             if layer.a_func is not None:
                 func_name = layer.a_func.__name__
@@ -702,16 +709,18 @@ class ANN:
             plt.show()
 
 if __name__ == "__main__":
-    X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-    y = np.array([[0], [1], [1], [0]])
+    X = np.array([[0.05, 0.1]])
+    y = np.array([[0.01, 0.99]])
     
-    layer_i = Layer(sigmoid, [random_uniform, {"seed": 42, "lb": -0.5, "ub": 0.5}], 2)
-    layer_1 = Layer(sigmoid, [random_uniform, {"seed": 60, "lb": -0.5, "ub": 0.5}], 4)
-    layer_o = Layer(sigmoid, [None, {}], 1)
+    layer_i = Layer(sigmoid, [xavier_init, {"seed": 42, "lb": -0.5, "ub": 0.5}], 2)
+    layer_1 = Layer(sigmoid, [xavier_init, {"seed": 60, "lb": -0.5, "ub": 0.5}], 2)
+    layer_o = Layer(sigmoid, [None, {}], 2)
     
-    ann = ANN(None, [layer_1], input=layer_i, output=layer_o, error=MSE)
-    ann.train(X, y, batch_size=4, l_rate=0.5, epoch=1000, verb=1)
+    ann = ANN(None, [layer_1, layer_1, layer_1], input=layer_i, output=layer_o, error=MSE)
+    ann.train(X, y, batch_size=4, l_rate=0.5, epoch=2, verb=1)
+    
     
     predictions = ann.predict(X)
+    ann.show()
     print("Predictions:")
     print(predictions)
