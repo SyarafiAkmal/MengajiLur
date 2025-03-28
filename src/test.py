@@ -197,7 +197,7 @@ def main():
     
     # test_viz()
     # test_activations()
-    # test_batches()
+    test_batches()
     # test_save_load()
     # test_init_methods()
     # test_losses()
