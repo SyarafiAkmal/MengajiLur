@@ -173,10 +173,12 @@ class Layer:
         self.weight_grad = None 
 
 class ANN:
-    def __init__(self, data=None, config=None, input=None, output=None, error=None, load_path=None):
+    def __init__(self, data=None, config=None, input=None, output=None, error=None, load_path=None, reg=None, lambda_reg=0.0):
         self.data = data
         self.err_func = error
         self.history = {"train_loss": [], "val_loss": []}
+        self.reg = reg
+        self.lambda_reg = lambda_reg
         
         if load_path:
             self.load(load_path)
@@ -272,7 +274,20 @@ class ANN:
         
         # Weight gradients 
         for i in range(len(self.network)-1):
-            self.network[i].weight_grad = self.network[i].input.T @ self.network[i+1].error
+            # self.network[i].weight_grad = self.network[i].input.T @ self.network[i+1].error
+
+            grad = self.network[i].input.T @ self.network[i+1].error
+
+            if self.reg == 'l1':
+                reg_term = self.lambda_reg * np.sign(self.network[i].weight_to)
+                reg_term[0, :] = 0
+                grad += reg_term
+            elif self.reg == 'l2':
+                reg_term = self.lambda_reg * self.network[i].weight_to
+                reg_term[0, :] = 0
+                grad += reg_term
+
+            self.network[i].weight_grad = grad
 
     def update_weights(self, learning_rate):
         batch_size = self.network[0].input.shape[0]  
@@ -325,6 +340,16 @@ class ANN:
                 
                 # Loss
                 batch_loss = self.err_func(y_batch, output)
+                if self.reg in ['l1', 'l2']:
+                    reg_loss = 0
+                    for layer in self.network[:-1]:
+                        if layer.weight_to is not None:
+                            weights_wo_bias = layer.weight_to[1:, :]
+                            if self.reg == 'l1':
+                                reg_loss += np.sum(np.abs(weights_wo_bias))
+                            elif self.reg == 'l2':
+                                reg_loss += np.sum(np.square(weights_wo_bias))
+                    batch_loss += self.lambda_reg * reg_loss
                 batch_losses.append(batch_loss)
                 
                 # Backward pass
@@ -716,7 +741,7 @@ if __name__ == "__main__":
     layer_1 = Layer(sigmoid, [xavier_init, {"seed": 60, "lb": -0.5, "ub": 0.5}], 2)
     layer_o = Layer(sigmoid, [None, {}], 2)
     
-    ann = ANN(None, [layer_1, layer_1, layer_1], input=layer_i, output=layer_o, error=MSE)
+    ann = ANN(None, [layer_1, layer_1, layer_1], input=layer_i, output=layer_o, error=MSE, reg="l2", lambda_reg=0.01)
     ann.train(X, y, batch_size=4, l_rate=0.5, epoch=2, verb=1)
     
     
