@@ -213,8 +213,6 @@ class ANN:
         
         # Process through each layer
         for i in range(len(self.network)-1):
-            print(self.network[i].input.shape)
-            print(self.network[i].weight_to.shape)
             self.network[i+1].net = self.network[i].input @ self.network[i].weight_to
             
             if i == len(self.network)-2: 
@@ -233,8 +231,6 @@ class ANN:
         batch_size = X.shape[0]
         
         output_layer = self.network[-1]
-
-        # print(output_layer)
         
         if output_layer.a_func == sigmoid and (self.err_func == MSE or self.err_func == SSE):
             # Sigmoid and MSE loss 
@@ -296,8 +292,6 @@ class ANN:
 
     def train(self, X_train=None, y_train=None, batch_size=32, l_rate=0.01, epoch=10, X_val=None, y_val=None, verb=0):
         self.history = {"train_loss": [], "val_loss": []}
-
-        # print(self.history)
         
         if X_train is None or y_train is None:
             print("No training data provided")
@@ -315,9 +309,7 @@ class ANN:
         
         n_samples = X_train.shape[0]
         n_batches = int(np.ceil(n_samples / batch_size))
-        
-        # print(l_rate)
-        
+                
         for e in range(epoch):
             epoch_start = time.time()
             
