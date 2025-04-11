@@ -42,8 +42,8 @@ Clone Repository ini dengan menjalankan perintah berikut pada terminal Anda
 
 ## Kontributor serta Pembagian Tugasnya
 
-| NIM      | Nama                    | Tugas |
-|----------|-------------------------|-------|
-| 13522018 | Ibrahim Ihsan Rasyid    | |
-| 13522028 | Panji Sri Kuncara Wisma | |
-| 13522076 | Muhammad Syarafi Akmal  | |
+| NIM      | Nama                    | Tugas                                           |
+|----------|-------------------------|-------------------------------------------------|
+| 13522018 | Ibrahim Ihsan Rasyid    | Regularisasi, notebook test keseluruhan, laporan|
+| 13522028 | Panji Sri Kuncara Wisma |Visualisasi, save & load, bonus fungsi aktivasi, fix backpropagation, testing mnist dataset, debug dan fix kode ann, laporan |
+| 13522076 | Muhammad Syarafi Akmal  | Kode base ann (forward propagation and backward propagation), bonus fungsi aktivasi, inisialisasi bobot, notebook test partial, laporan |
